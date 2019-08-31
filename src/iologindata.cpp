@@ -236,8 +236,8 @@ bool IOLoginData::loadPlayerPreyData(Player* player)
 	if ((result = db.storeQuery(query.str()))) {
 		do {
 			uint16_t slotNum = result->getNumber<uint16_t>("num");
-			player->preySlotState[slotNum] = result->getNumber<uint16_t>("state");
-			player->preySlotUnlocked[slotNum] = result->getNumber<uint16_t>("unlocked");
+			player->preySlotState[slotNum] = result->getNumber<uint8_t>("state");
+			player->preySlotUnlocked[slotNum] = result->getNumber<uint8_t>("unlocked");
 			player->preySlotCurrentMonster[slotNum] = result->getString("current");
 			player->preySlotMonsterList[slotNum] = result->getString("monster_list");
 			player->preySlotFreeRerollIn[slotNum] = result->getNumber<uint16_t>("free_reroll_in");
@@ -565,7 +565,7 @@ bool IOLoginData::loadPlayer(Player* player, DBResult_ptr result)
 	if ((result = db.storeQuery(query.str()))) {
 		do {
 			time_t killTime = result->getNumber<time_t>("time");
-			if ((time(nullptr) - killTime) <= 45 * 24 * 60 * 60) {
+			if ((time(nullptr) - killTime) <= g_config.getNumber(ConfigManager::FRAG_TIME)) {
 				player->unjustifiedKills.emplace_back(result->getNumber<uint32_t>("target"), killTime, result->getNumber<bool>("unavenged"));
 			}
 		} while (result->next());
@@ -708,23 +708,6 @@ bool IOLoginData::loadPlayer(Player* player, DBResult_ptr result)
 					container->internalAddThing(item);
 				}
 			}
-		}
-	}
-
-	//load autoloot list set
-	query.str(std::string());
-	query << "SELECT `autoloot_list` FROM `player_autoloot` WHERE `player_id` = " << player->getGUID();
-	if ((result = db.storeQuery(query.str()))) {
-		unsigned long lootlistSize;
-		const char* autolootlist = result->getStream("autoloot_list", lootlistSize);
-		PropStream propStreamList;
-		propStreamList.init(autolootlist, lootlistSize);
-
-		int16_t value;
-		int16_t item = propStreamList.read<int16_t>(value);
-		while (item) {
-			player->addAutoLootItem(value);
-			item = propStreamList.read<int16_t>(value);
 		}
 	}
 
@@ -1073,33 +1056,6 @@ bool IOLoginData::savePlayer(Player* player)
 		if (!saveItems(player, itemList, rewardQuery, propWriteStream)) {
 			return false;
 		}
-	}
-
-	//Autoloot (save autoloot list)
-	query.str(std::string());
-	query << "DELETE FROM `player_autoloot` WHERE `player_id` = " << player->getGUID();
-	if (!db.executeQuery(query.str())) {
-		return false;
-	}
-
-	PropWriteStream propWriteStreamAutoLoot;
-
-	for (auto i : player->autoLootList) {
-		propWriteStreamAutoLoot.write<uint16_t>(i);
-	}
-
-	size_t lootlistSize;
-	const char* autolootlist = propWriteStreamAutoLoot.getStream(lootlistSize);
-
-	query.str(std::string());
-
-	DBInsert autolootQuery("INSERT INTO `player_autoloot` (`player_id`, `autoloot_list`) VALUES ");
-	query << player->getGUID() << ',' << db.escapeBlob(autolootlist, lootlistSize);
-	if (!autolootQuery.addRow(query)) {
-		return false;
-	}
-	if (!autolootQuery.execute()) {
-		return false;
 	}
 
 	//save inbox items

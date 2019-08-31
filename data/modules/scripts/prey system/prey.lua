@@ -164,7 +164,7 @@ function Player.createMonsterList(self)
 	local repeatedList = {}
 	for slot = CONST_PREY_SLOT_FIRST, CONST_PREY_SLOT_THIRD do
 		if (self:getPreyCurrentMonster(slot) ~= '') then
-			repeatedList[#repeatedList + 1] = self:getPreyCurrentMonster()
+			repeatedList[#repeatedList + 1] = self:getPreyCurrentMonster(slot)
 		end
 		if (self:getPreyMonsterList(slot) ~= '') then
 			local currentList = self:getPreyMonsterList(slot):split(";")
@@ -420,6 +420,10 @@ function Player.sendPreyData(self, slot)
 
 	-- Resources and times are always sent
 	msg:addU16(self:getMinutesUntilFreeReroll(slot)) -- next prey reroll here
+	-- Client 11.9+ compat, feature unavailable.
+	if self:getClient().version >= 1190 then
+		msg:addByte(0x00) -- preyWildCards
+	end
 	msg:addByte(0xEC)
 	self:sendResource("prey", self:getPreyBonusRerolls())
 	self:sendResource("bank", self:getBankBalance())
@@ -427,6 +431,11 @@ function Player.sendPreyData(self, slot)
 	-- List reroll price
 	msg:addByte(Prey.S_Packets.PreyRerollPrice)
 	msg:addU32(self:getRerollPrice())
+	-- Client 11.9+ compat, feature unavailable.
+	if self:getClient().version >= 1190 then
+		msg:addByte(0x00)
+		msg:addByte(0x00)
+	end
 	-- Sending message to client
 	msg:sendToPlayer(self)
 end

@@ -3,7 +3,6 @@
 	<health now="2200" max="2200"/>
 	<look type="53" corpse="5998"/>
 	<targetchange interval="2000" chance="0"/>
-	<strategy attack="90" defense="10"/>
 	<flags>
 		<flag summonable="0"/>
 		<flag attackable="1"/>
@@ -17,7 +16,6 @@
 		<flag staticattack="90"/>
 		<flag runonhealth="10"/>
 		<flag isblockable="0" />
-
 	</flags>
 	<attacks>
 		<attack name="melee" interval="2000" skill="50" attack="50"/>

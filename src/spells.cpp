@@ -196,6 +196,18 @@ bool Spells::registerRuneLuaEvent(RuneSpell* event)
 	return false;
 }
 
+std::list<uint16_t> Spells::getSpellsByVocation(uint16_t vocationId)
+{
+	std::list<uint16_t> spellsList;
+	for (const auto& it : instants) {
+		VocSpellMap map = it.second.getVocMap();
+		if (map.find(vocationId)->second) {
+			spellsList.push_back(it.second.getId());
+		}
+	}
+	return spellsList;
+}
+
 Spell* Spells::getSpellByName(const std::string& name)
 {
 	Spell* spell = getRuneSpellByName(name);
@@ -1234,6 +1246,7 @@ bool RuneSpell::executeUse(Player* player, Item* item, const Position&, Thing* t
 	if (hasCharges && item && g_config.getBoolean(ConfigManager::REMOVE_RUNE_CHARGES)) {
 		int32_t newCount = std::max<int32_t>(0, item->getItemCount() - 1);
 		g_game.transformItem(item, item->getID(), newCount);
+		player->updateSupplyTracker(item);
 	}
 	return true;
 }

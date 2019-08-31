@@ -691,8 +691,8 @@ Storage = {
 	TheApeCity = {
 		Started = 12120,
 		Questline = 12121, -- Storage through the Quest
-		DworcDoor = 12122,
-		ChorDoor = 12123,
+		DworcDoor = 12128,
+		ChorDoor = 12119,
 		ParchmentDecyphering = 12124,
 		FibulaDoor = 12125,
 		WitchesCapSpot = 12126,
@@ -1318,6 +1318,12 @@ Storage = {
 	},
 
 	DreamersChallenge = {
+		LeverNightmare1 = 50815,
+		LeverNightmare2 = 50816,
+		LeverNightmare3 = 50817,
+		LeverBrotherhood1 = 50818,
+		LeverBrotherhood2 = 50819,
+		LeverBrotherhood3 = 50820,
 		Reward = 9050
 	},
 
@@ -1485,6 +1491,7 @@ GlobalStorage = {
 	},
 	NaginataStone = 50058,
 	ExpBoost = 51052,
-	SwordOfFury = 5635
+	SwordOfFury = 5635,
+	XpDisplayMode = 5634
 
 }

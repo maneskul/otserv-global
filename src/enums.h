@@ -91,6 +91,8 @@ enum itemAttrTypes : uint32_t {
 	ITEM_ATTRIBUTE_DOORID = 1 << 22,
 	ITEM_ATTRIBUTE_SPECIAL = 1 << 23,
 	ITEM_ATTRIBUTE_IMBUINGSLOTS = 1 << 24,
+
+	ITEM_ATTRIBUTE_CUSTOM = 1U << 31
 };
 
 enum VipStatus_t : uint8_t {
@@ -654,6 +656,7 @@ struct CombatDamage
 
 	CombatOrigin origin;
 	bool critical;
+	int affected;
 
 	CombatDamage()
 	{
@@ -661,11 +664,21 @@ struct CombatDamage
 		primary.type = secondary.type = COMBAT_NONE;
 		primary.value = secondary.value = 0;
 		critical = false;
+		affected = 1;
 	}
 };
 
 using MarketOfferList = std::list<MarketOffer>;
 using HistoryMarketOfferList = std::list<HistoryMarketOffer>;
 using ShopInfoList = std::list<ShopInfo>;
+
+enum MonstersEvent_t : uint8_t {
+	MONSTERS_EVENT_NONE = 0,
+	MONSTERS_EVENT_THINK = 1,
+	MONSTERS_EVENT_APPEAR = 2,
+	MONSTERS_EVENT_DISAPPEAR = 3,
+	MONSTERS_EVENT_MOVE = 4,
+	MONSTERS_EVENT_SAY = 5,
+};
 
 #endif

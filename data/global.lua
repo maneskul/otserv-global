@@ -386,7 +386,6 @@ Game.loadMap('data/world/worldchanges/habitats.otbm')
 return true
 end
 
---[[function getLootRandom()
-	math.randomseed(os.mtime())
+function getLootRandom()
 	return math.random(0, MAX_LOOTCHANCE) / configManager.getNumber(configKeys.RATE_LOOT)
-end]]
+end

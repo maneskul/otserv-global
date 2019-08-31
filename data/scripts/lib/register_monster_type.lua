@@ -13,15 +13,6 @@ MonsterType.register = function(self, mask)
 	return registerMonsterType(self, mask)
 end
 
-registerMonsterType.eventFile = function(mtype, mask)
-	if mask.eventFile then
-		if type(mask.eventFile) == "boolean" then
-			mtype:setScriptFile()
-		else
-			mtype:setScriptFile(mask.eventFile)
-		end
-	end
-end
 registerMonsterType.description = function(mtype, mask)
 	if mask.description then
 		mtype:nameDescription(mask.description)
@@ -99,6 +90,21 @@ registerMonsterType.flags = function(mtype, mask)
 		end
 		if mask.flags.canPushItems then
 			mtype:canPushItems(mask.flags.canPushItems)
+		end
+		if mask.flags.rewardboss then
+			mtype:isRewardBoss(mask.flags.rewardboss)
+		end
+		if mask.flags.preyable then
+			mtype:isPreyable(mask.flags.preyable)
+		end
+		if mask.flags.pet then
+			mtype:isPet(mask.flags.pet)
+		end
+		if mask.flags.passive then
+			mtype:isPassive(mask.flags.passive)
+		end
+		if mask.flags.respawntype then
+			mtype:respawnType(mask.flags.respawntype)
 		end
 		if mask.flags.canPushCreatures then
 			mtype:canPushCreatures(mask.flags.canPushCreatures)

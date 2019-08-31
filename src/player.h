@@ -39,6 +39,7 @@
 #include "reward.h"
 #include "rewardchest.h"
 #include "gamestore.h"
+#include "imbuements.h"
 
 class House;
 class NetworkMessage;
@@ -49,6 +50,7 @@ class Party;
 class SchedulerTask;
 class Bed;
 class Guild;
+class Imbuement;
 
 enum skillsid_t {
 	SKILLVALUE_LEVEL = 0,
@@ -380,6 +382,11 @@ class Player final : public Creature, public Cylinder
 			bedItem = b;
 		}
 
+		bool inImbuing() {
+			return imbuing != nullptr;
+		}
+		void inImbuing(Item* item);
+		
 		void addBlessing(uint8_t index, uint8_t count) {
 			if (blessings[index - 1] == 255) {
 				return;
@@ -1212,6 +1219,11 @@ class Player final : public Creature, public Cylinder
 				client->sendOutfitWindow();
 			}
 		}
+		void sendImbuementWindow(Item* item) {
+			if (client) {
+				client->sendImbuementWindow(item);
+			}
+		}
 		void sendCloseContainer(uint8_t cid) {
 			if (client) {
 				client->sendCloseContainer(cid);
@@ -1253,9 +1265,9 @@ class Player final : public Creature, public Cylinder
 				client->sendFightModes();
 			}
 		}
-		void sendNetworkMessage(const NetworkMessage& message, bool broadcast = true) {
+		void sendNetworkMessage(const NetworkMessage& message) {
 			if (client) {
-				client->writeToOutputBuffer(message, broadcast);
+				client->writeToOutputBuffer(message);
 			}
 		}
 
@@ -1306,32 +1318,6 @@ class Player final : public Creature, public Cylinder
 		void forgetInstantSpell(const std::string& spellName);
 		bool hasLearnedInstantSpell(const std::string& spellName) const;
 
-		//Autoloot
-		void addAutoLootItem(uint16_t itemId);
-		void removeAutoLootItem(uint16_t itemId);
-		bool getAutoLootItem(uint16_t itemId);
-
-		bool startLiveCast(const std::string& password) {
-			return client && client->startLiveCast(password);
-		}
-		bool stopLiveCast() {
-			return client && client->stopLiveCast();
-		}
-		bool isLiveCaster() const {
-			return client && client->isLiveCaster();
-		}
-		bool getSpectators(std::vector<ProtocolSpectator_ptr>& spectators) const {
-			if (!isLiveCaster()) {
-				return false;
-			}
-			spectators = client->spectators;
-			return true;
-		}
-
-		const std::map<uint8_t, OpenContainer>& getOpenContainers() const {
-			return openContainers;
-		}
-
 		uint16_t getBaseXpGain() const {
 			return baseXpGain;
 		}
@@ -1375,13 +1361,46 @@ class Player final : public Creature, public Cylinder
 			return idleTime;
 		}
 
-		void doCriticalDamage(CombatDamage& damage) const;
+		void onEquipImbueItem(Imbuement* imbuement);
+		void onDeEquipImbueItem(Imbuement* imbuement);
 
 		//Custom: Anti bug do market
 		bool isMarketExhausted() const;
 		void updateMarketExhausted() {
 			lastMarketInteraction = OTSYS_TIME();
 		}
+
+   		bool updateKillTracker(Container* corpse, const std::string& name, const Outfit_t creatureOutfit) const
+ 		{
+  			if (client && getProtocolVersion() > 1140) {
+				client->sendKillTrackerUpdate(corpse, name, creatureOutfit);
+				return true;
+ 			}
+
+			return false;
+ 		}
+ 
+   		void updateSupplyTracker(const Item* item)
+ 		{
+  			if (client && getProtocolVersion() > 1140) {
+ 				client->sendUpdateSupplyTracker(item);
+ 			}
+ 		}
+
+   		void updateImpactTracker(int32_t quantity, bool isHeal)
+ 		{
+  			if (client && getProtocolVersion() > 1140) {
+ 				client->sendUpdateImpactTracker(quantity, isHeal);
+ 			}
+ 		}
+
+   		void updateLootTracker(Item* item)
+ 		{
+  			if (client && getProtocolVersion() > 1140) {
+ 				client->sendUpdateLootTracker(item);
+ 			}
+ 		}
+
 
 	protected:
 		std::forward_list<Condition*> getMuteConditions() const;
@@ -1433,10 +1452,6 @@ class Player final : public Creature, public Cylinder
 		void internalAddThing(uint32_t index, Thing* thing) final;
 
 		std::unordered_set<uint32_t> attackedSet;
-
-		 //Autoloot
-		std::unordered_set<uint32_t> autoLootList;
-		//std::unordered_set<uint32_t> autoLootList; (use this if you have ubuntu 16+)
 
 		std::unordered_set<uint32_t> VIPList;
 
@@ -1490,6 +1505,7 @@ class Player final : public Creature, public Cylinder
 		GuildRank_ptr guildRank;
 		Group* group = nullptr;
 		Inbox* inbox;
+		Item* imbuing = nullptr; // for intarnal use
 		Item* tradeItem = nullptr;
  		Item* inventory[CONST_SLOT_LAST + 1] = {};
 		Item* writeItem = nullptr;
@@ -1552,8 +1568,8 @@ class Player final : public Creature, public Cylinder
 		
 		// New Prey
 		uint16_t preyBonusRerolls = 0;
-		std::vector<uint16_t> preySlotState = {0, 0, 0};
-		std::vector<uint16_t> preySlotUnlocked = {0, 0, 0};
+		std::vector<uint8_t> preySlotState = {0, 0, 0};
+		std::vector<uint8_t> preySlotUnlocked = {0, 0, 0};
 		std::vector<std::string> preySlotCurrentMonster = { "", "", "" };
 		std::vector<std::string> preySlotMonsterList = { "", "", "" };
 		std::vector<uint16_t> preySlotFreeRerollIn = { 0, 0, 0 };
@@ -1628,7 +1644,6 @@ class Player final : public Creature, public Cylinder
 		friend class Actions;
 		friend class IOLoginData;
 		friend class ProtocolGame;
-		friend class ProtocolGameBase;
 };
 
 #endif

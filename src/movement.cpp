@@ -26,10 +26,12 @@
 #include "pugicast.h"
 
 #include "movement.h"
+#include "imbuements.h"
 
 extern Game g_game;
 extern Vocations g_vocations;
 extern Events* g_events;
+extern Imbuements* g_imbuements;
 
 MoveEvents::MoveEvents() :
 	scriptInterface("MoveEvents Interface")
@@ -100,6 +102,12 @@ Event_ptr MoveEvents::getEvent(const std::string& nodeName)
 		return nullptr;
 	}
 	return Event_ptr(new MoveEvent(&scriptInterface));
+}
+
+bool MoveEvents::isRegistered(uint32_t itemid)
+{
+	auto it = itemIdMap.find(itemid);
+	return it != itemIdMap.end();
 }
 
 bool MoveEvents::registerEvent(Event_ptr event, const pugi::xml_node& node)
@@ -707,10 +715,23 @@ uint32_t MoveEvent::EquipItem(MoveEvent* moveEvent, Player* player, Item* item, 
 	} else {
 		player->setItemAbility(slot, true);
 	}
-	
+
 	if (it.imbuingSlots > 0) {
-			g_events->eventPlayerOnEquipImbuement(player, item);
+		std::vector<Imbuement*> imbuement;
+		for(uint8_t slotid = 0; slotid < it.imbuingSlots; slotid++) {
+			uint32_t info = item->getImbuement(slotid);
+			if (info >> 8 == 0) {
+				continue;
+			}
+			imbuement.push_back(g_imbuements->getImbuement(info & 0xFF));
 		}
+		if(!imbuement.empty()) {
+			g_game.startImbuementCountdown(item);
+			for (Imbuement* ib : imbuement) {
+				player->onEquipImbueItem(ib);
+			}
+		}
+	}
 
 	if (!it.abilities) {
 		return 1;
@@ -757,37 +778,31 @@ uint32_t MoveEvent::EquipItem(MoveEvent* moveEvent, Player* player, Item* item, 
 		player->addCondition(condition);
 	}
 
-	//skill modifiers
-	bool needUpdateSkills = false;
+	//skill/stats modifiers
+	bool needUpdate = false;
 
 	for (int32_t i = SKILL_FIRST; i <= SKILL_LAST; ++i) {
 		if (it.abilities->skills[i]) {
-			needUpdateSkills = true;
+			needUpdate = true;
 			player->setVarSkill(static_cast<skills_t>(i), it.abilities->skills[i]);
 		}
 	}
 
-	if (needUpdateSkills) {
-		player->sendSkills();
-	}
-
-	//stat modifiers
-	bool needUpdateStats = false;
-
 	for (int32_t s = STAT_FIRST; s <= STAT_LAST; ++s) {
 		if (it.abilities->stats[s]) {
-			needUpdateStats = true;
+			needUpdate = true;
 			player->setVarStats(static_cast<stats_t>(s), it.abilities->stats[s]);
 		}
 
 		if (it.abilities->statsPercent[s]) {
-			needUpdateStats = true;
+			needUpdate = true;
 			player->setVarStats(static_cast<stats_t>(s), static_cast<int32_t>(player->getDefaultStats(static_cast<stats_t>(s)) * ((it.abilities->statsPercent[s] - 100) / 100.f)));
 		}
 	}
 
-	if (needUpdateStats) {
+	if (needUpdate) {
 		player->sendStats();
+		player->sendSkills();
 	}
 
 	return 1;
@@ -806,17 +821,26 @@ uint32_t MoveEvent::DeEquipItem(MoveEvent*, Player* player, Item* item, slots_t 
 		g_game.transformItem(item, it.transformDeEquipTo);
 		g_game.startDecay(item);
 	}
+
 	if (it.imbuingSlots > 0) {
-			g_events->eventPlayerOnDeEquipImbuement(player, item);
+		std::vector<Imbuement*> imbuement;
+		for(uint8_t slotid = 0; slotid < it.imbuingSlots; slotid++) {
+			uint32_t info = item->getImbuement(slotid);
+			if (info >> 8 == 0) {
+				continue;
+			}
+			imbuement.push_back(g_imbuements->getImbuement(info & 0xFF));
 		}
+		if(!imbuement.empty()) {
+			for (Imbuement* ib : imbuement) {
+				player->onDeEquipImbueItem(ib);
+			}
+		}
+	}
 
 	if (!it.abilities) {
 		return 1;
 	}
-	
-	if (it.imbuingSlots > 0) {
-			g_events->eventPlayerOnDeEquipImbuement(player, item);
-		}
 
 	if (it.abilities->invisible) {
 		player->removeCondition(CONDITION_INVISIBLE, static_cast<ConditionId_t>(slot));
@@ -839,37 +863,31 @@ uint32_t MoveEvent::DeEquipItem(MoveEvent*, Player* player, Item* item, slots_t 
 		player->removeCondition(CONDITION_REGENERATION, static_cast<ConditionId_t>(slot));
 	}
 
-	//skill modifiers
-	bool needUpdateSkills = false;
+	//skill/stats modifiers
+	bool needUpdate = false;
 
 	for (int32_t i = SKILL_FIRST; i <= SKILL_LAST; ++i) {
 		if (it.abilities->skills[i] != 0) {
-			needUpdateSkills = true;
+			needUpdate = true;
 			player->setVarSkill(static_cast<skills_t>(i), -it.abilities->skills[i]);
 		}
 	}
 
-	if (needUpdateSkills) {
-		player->sendSkills();
-	}
-
-	//stat modifiers
-	bool needUpdateStats = false;
-
 	for (int32_t s = STAT_FIRST; s <= STAT_LAST; ++s) {
 		if (it.abilities->stats[s]) {
-			needUpdateStats = true;
+			needUpdate = true;
 			player->setVarStats(static_cast<stats_t>(s), -it.abilities->stats[s]);
 		}
 
 		if (it.abilities->statsPercent[s]) {
-			needUpdateStats = true;
+			needUpdate = true;
 			player->setVarStats(static_cast<stats_t>(s), -static_cast<int32_t>(player->getDefaultStats(static_cast<stats_t>(s)) * ((it.abilities->statsPercent[s] - 100) / 100.f)));
 		}
 	}
 
-	if (needUpdateStats) {
+	if (needUpdate) {
 		player->sendStats();
+		player->sendSkills();
 	}
 
 	return 1;

@@ -215,7 +215,7 @@ function Player.sendExtendedOpcode(self, opcode, buffer)
  	networkMessage:addByte(0x32)
  	networkMessage:addByte(opcode)
  	networkMessage:addString(buffer)
-	networkMessage:sendToPlayer(self, false)
+	networkMessage:sendToPlayer(self)
  	networkMessage:delete()
 	return true
 end
@@ -288,7 +288,7 @@ end
     function Player.sendLootStats(self, item)
     	local msg = NetworkMessage()
     	msg:addByte(0xCF) -- loot analyser bit
-    	msg:addItem(item) -- item userdata
+    	msg:addItem(item, self) -- item userdata
     	msg:addString(getItemName(item:getId()))
     	msg:sendToPlayer(self)
     end

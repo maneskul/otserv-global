@@ -1,5 +1,7 @@
---[[function Monster:onDropLoot(corpse)
-	if configManager.getNumber(configKeys.RATE_LOOT) == 0 then
+function Monster:onDropLoot(corpse)
+	local mType = self:getType()
+	if mType:isRewardBoss() then
+		corpse:registerReward()
 		return
 	end
 
@@ -32,9 +34,13 @@
 			player:sendTextMessage(MESSAGE_LOOT, text)
 		end
 	end
-end]]
+end
 
 function Monster:onSpawn(position)
+	if self:getType():isRewardBoss() then
+		self:setReward(true)
+	end
+
 	if not self:getType():canSpawn(position) then
 		self:remove()
 	else

@@ -42,6 +42,7 @@ extern MoveEvents* g_moveEvents;
 extern Weapons* g_weapons;
 extern CreatureEvents* g_creatureEvents;
 extern Events* g_events;
+extern Imbuements* g_imbuements;
 
 MuteCountMap Player::muteCountMap;
 
@@ -499,6 +500,7 @@ void Player::addSkillAdvance(skills_t skill, uint64_t count)
 
 	if (sendUpdateSkills) {
 		sendSkills();
+		sendStats();
 	}
 }
 
@@ -951,6 +953,20 @@ Item* Player::getWriteItem(uint32_t& windowTextId, uint16_t& maxWriteLen)
 	windowTextId = this->windowTextId;
 	maxWriteLen = this->maxWriteLen;
 	return writeItem;
+}
+
+void Player::inImbuing(Item* item)
+{
+	if (imbuing) {
+		imbuing->decrementReferenceCounter();
+	}
+
+	if (item) {
+		imbuing = item;
+		imbuing->incrementReferenceCounter();
+	} else {
+		imbuing = nullptr;
+	}
 }
 
 void Player::setWriteItem(Item* item, uint16_t maxWriteLen /*= 0*/)
@@ -1663,6 +1679,7 @@ void Player::addManaSpent(uint64_t amount)
 
 	if (sendUpdateStats) {
 		sendStats();
+		sendSkills();
 	}
 }
 
@@ -1960,6 +1977,20 @@ BlockType_t Player::blockHit(Creature* attacker, CombatType_t combatType, int32_
 					}
 				}
 			}
+
+			uint8_t slots = Item::items[item->getID()].imbuingSlots;
+			for (uint8_t i = 0; i < slots; i++) {
+				uint32_t info = item->getImbuement(i);
+				if (info >> 8) {
+					Imbuement* ib = g_imbuements->getImbuement(info & 0xFF);
+					const int16_t& absorbPercent2 = ib->absorbPercent[combatTypeToIndex(combatType)];
+					
+					if (absorbPercent2 != 0) {
+						damage -= std::ceil(damage * (absorbPercent2 / 100.));
+					}
+				}
+			}
+
 		}
 
 		if (damage <= 0) {
@@ -4609,6 +4640,7 @@ bool Player::addOfflineTrainingTries(skills_t skill, uint64_t tries)
 
 	if (sendUpdate) {
 		sendSkills();
+		sendStats();
 	}
 
 	std::ostringstream ss;
@@ -4783,36 +4815,96 @@ void Player::setGuild(Guild* guild)
 	}
 }
 
-void Player::doCriticalDamage(CombatDamage& damage) const
-{
-	int32_t criticalChance = getSkillLevel(SKILL_CRITICAL_HIT_CHANCE);
-	if (uniform_random(1, 100) <= criticalChance) {
-		float multiplier = 1 + ((float) getSkillLevel(SKILL_CRITICAL_HIT_DAMAGE) / 100);
-
-		damage.primary.value = (int32_t) (multiplier * damage.primary.value);
-		damage.secondary.value = (int32_t) (multiplier * damage.secondary.value);
-		damage.critical = true;
-	}
-}
-
-//Autoloot
-void Player::addAutoLootItem(uint16_t itemId)
-{
-	autoLootList.insert(itemId);
-}
-
-void Player::removeAutoLootItem(uint16_t itemId)
-{
-	autoLootList.erase(itemId);
-}
-
-bool Player::getAutoLootItem(const uint16_t itemId)
-{
-	return autoLootList.find(itemId) != autoLootList.end();
-}
-
-//Custom: Anti bug do market
+//Custom: Anti bug of market
 bool Player::isMarketExhausted() const {
 	uint32_t exhaust_time = 3000; // half second 500
 	return (OTSYS_TIME() - lastMarketInteraction < exhaust_time);
+}
+
+void Player::onEquipImbueItem(Imbuement* imbuement)
+{
+	// check skills
+	bool requestUpdate = false;
+
+	for (int32_t i = SKILL_FIRST; i <= SKILL_LAST; ++i) {
+		if (imbuement->skills[i]) {
+			requestUpdate = true;
+			setVarSkill(static_cast<skills_t>(i), imbuement->skills[i]);
+		}
+	}
+
+	if (requestUpdate) {
+		sendSkills();
+		requestUpdate = false;
+	}
+
+	// check magpoint
+	for (int32_t s = STAT_FIRST; s <= STAT_LAST; ++s) {
+		if (imbuement->stats[s]) {
+			requestUpdate = true;
+			setVarStats(static_cast<stats_t>(s), imbuement->stats[s]);
+		}
+	}
+
+	if (requestUpdate) {
+		sendStats();
+		sendSkills();
+	}
+
+	// speed
+	if (imbuement->speed != 0) {
+		g_game.changeSpeed(this, imbuement->speed);
+	}
+
+	// capacity
+	if (imbuement->capacity != 0) {
+		capacity += imbuement->capacity;
+		sendStats();
+	}
+
+	return;
+}
+
+void Player::onDeEquipImbueItem(Imbuement* imbuement)
+{
+	// check skills
+	bool requestUpdate = false;
+
+	for (int32_t i = SKILL_FIRST; i <= SKILL_LAST; ++i) {
+		if (imbuement->skills[i]) {
+			requestUpdate = true;
+			setVarSkill(static_cast<skills_t>(i), -imbuement->skills[i]);
+		}
+	}
+
+	if (requestUpdate) {
+		sendSkills();
+		requestUpdate = false;
+	}
+
+	// check magpoint
+	for (int32_t s = STAT_FIRST; s <= STAT_LAST; ++s) {
+		if (imbuement->stats[s]) {
+			requestUpdate = true;
+			setVarStats(static_cast<stats_t>(s), -imbuement->stats[s]);
+		}
+	}
+
+	if (requestUpdate) {
+		sendStats();
+		sendSkills();
+	}
+
+	// speed
+	if (imbuement->speed != 0) {
+		g_game.changeSpeed(this, -imbuement->speed);
+	}
+
+	// capacity
+	if (imbuement->capacity != 0) {
+		capacity -= imbuement->capacity;
+		sendStats();
+	}
+
+	return;
 }

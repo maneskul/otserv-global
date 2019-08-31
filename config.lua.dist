@@ -8,7 +8,7 @@ removeChargesFromRunes = true
 removeChargesFromPotions = true
 removeWeaponAmmunition = true
 removeWeaponCharges = true
-timeToDecreaseFrags = 24 * 60 * 60 * 1000
+timeToDecreaseFrags = 45 * 24 * 60 * 60
 whiteSkullTime = 15 * 60 * 1000
 stairJumpExhaustion = 2 * 1000
 experienceByKillingPlayers = false
@@ -39,11 +39,6 @@ maxPacketsPerSecond = 25
 maxItem = 2000
 maxContainer = 100
 
--- 0 = Disable,
--- 1 = onKillMonster,
--- 2 = onOpenCorpse -- restart required]]
-autolootmode = 2
-
 -- Version Manual
 clientVersionMin = 1100
 clientVersionMax = 1200
@@ -59,10 +54,6 @@ gamestoreByModules = true
 
 -- Quest Sytem
 loadQuestLua = true
-
--- Casting System 
-enableLiveCasting = true
-liveCastPort = 7173
 
 -- Expert Pvp Config
 expertPvp = false

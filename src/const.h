@@ -546,6 +546,9 @@ enum item_t : uint16_t {
 
 	ITEM_TIBIA_COIN = 24774,
 
+	ITEM_EXERCISE_START = 32384,
+	ITEM_EXERCISE_END = 32389,
+
 	/** Casks and Kegs **/
 	ITEM_HEALTH_CASK_START = 28555,
 	ITEM_HEALTH_CASK_END = 28559,
@@ -625,6 +628,7 @@ enum ReloadTypes_t : uint8_t  {
 	RELOAD_TYPE_SPELLS,
 	RELOAD_TYPE_TALKACTIONS,
 	RELOAD_TYPE_WEAPONS,
+	RELOAD_TYPE_IMBUEMENTS,
 };
 
 enum NameEval_t : uint8_t {
@@ -639,9 +643,6 @@ enum NameEval_t : uint8_t {
 static constexpr int32_t CHANNEL_GUILD = 0x00;
 static constexpr int32_t CHANNEL_PARTY = 0x01;
 static constexpr int32_t CHANNEL_PRIVATE = 0xFFFF;
-
-static constexpr int32_t CHANNEL_CAST = 40;
-const std::string LIVE_CAST_CHAT_NAME = "Live Cast Chat";
 
 static constexpr int32_t STORAGEVALUE_PROMOTION = 30018;
 static constexpr int32_t STORAGEVALUE_EMOTE = 30019;

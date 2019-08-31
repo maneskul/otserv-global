@@ -9,6 +9,7 @@ function Player.sendTibiaTime(self, hours, minutes)
 end
 
 local events = {
+    'KillTracker',
     'ParasiteWarzone',
     'ElementalSpheresOverlords',
     'BigfootBurdenVersperoth',
@@ -63,7 +64,6 @@ local events = {
 	'BossesHero',
 	'DragonsKill',
     'deeplingBosses',
-    'imbueDamage',
     'theGreatDragonHuntKill',
     'bonusPreyLootKill',
     'bossesMissionCults'
@@ -88,15 +88,8 @@ function onLogin(player)
 	local loginStr = 'Welcome to ' .. configManager.getString(configKeys.SERVER_NAME) .. '!'
 	if player:getLastLoginSaved() <= 0 then
 		loginStr = loginStr .. ' Please choose your outfit.'
+		player:sendOutfitWindow()
 		player:setBankBalance(0)
-
-		if player:getSex() == 1 then
-			player:setOutfit({lookType = 128, lookHead = 78, lookBody = 106, lookLegs = 58, lookFeet = 76})
-		else
-			player:setOutfit({lookType = 136, lookHead = 78, lookBody = 106, lookLegs = 58, lookFeet = 76})
-		end
-
-		player:sendTutorial(1)
 	else
 		if loginStr ~= "" then
 			player:sendTextMessage(MESSAGE_STATUS_DEFAULT, loginStr)
@@ -106,7 +99,6 @@ function onLogin(player)
 	end
 
     player:sendTextMessage(MESSAGE_STATUS_DEFAULT, loginStr)
-	player:openChannel(10) -- LOOT CHANNEL
 
     local playerId = player:getId()
 
@@ -133,9 +125,9 @@ function onLogin(player)
 
     -- New Prey
     nextPreyTime[playerId] = {
-    	[CONST_PREY_SLOT_FIRST] = 1,
-	[CONST_PREY_SLOT_SECOND] = 1,
-	[CONST_PREY_SLOT_THIRD] = 1
+        [CONST_PREY_SLOT_FIRST] = 1,
+        [CONST_PREY_SLOT_SECOND] = 1,
+        [CONST_PREY_SLOT_THIRD] = 1
     }
 
     if (player:getAccountType() == ACCOUNT_TYPE_TUTOR) then
@@ -161,16 +153,13 @@ function onLogin(player)
 
  	-- OPEN CHANNELS
 	if table.contains({"Rookgaard", "Dawnport"}, player:getTown():getName())then
-		--player:openChannel(7) -- help channel
 		player:openChannel(3) -- world chat
 		player:openChannel(6) -- advertsing rook main
 	else
-		--player:openChannel(7) -- help channel
 		player:openChannel(3) -- world chat
 		player:openChannel(5) -- advertsing main
 	end
 
-      --
     -- Rewards
     local rewards = #player:getRewardList()
     if(rewards > 0) then
@@ -188,27 +177,38 @@ function onLogin(player)
         player:registerEvent(events[i])
     end
 
-
  	if player:getStorageValue(Storage.combatProtectionStorage) < 1 then
         player:setStorageValue(Storage.combatProtectionStorage, 1)
         onMovementRemoveProtection(playerId, player:getPosition(), 10)
 	end
 
-	-- Exp stats
+	-- Set Client XP Gain Rate
+	if Game.getStorageValue(GlobalStorage.XpDisplayMode) > 0 then
+		displayRate = Game.getExperienceStage(player:getLevel())
+		else
+		displayRate = 1
+	end
 	local staminaMinutes = player:getStamina()
-	local Boost = player:getExpBoostStamina()
-	if staminaMinutes > 2400 and player:isPremium() and Boost > 0 then
-		player:setBaseXpGain(Game.getExperienceStage(player:getLevel())*2) -- 200 = 1.0x, 200 = 2.0x, ... premium account
-	elseif staminaMinutes > 2400 and player:isPremium() and Boost <= 0 then
-		player:setBaseXpGain(Game.getExperienceStage(player:getLevel())*1.5) -- 150 = 1.0x, 150 = 1.5x, ... premium account
-	elseif staminaMinutes <= 2400 and staminaMinutes > 840 and player:isPremium() and Boost > 0 then
-		player:setBaseXpGain(Game.getExperienceStage(player:getLevel())*1.5) -- 150 = 1.5x		premium account
-	elseif staminaMinutes > 840 and Boost > 0 then
-		player:setBaseXpGain(Game.getExperienceStage(player:getLevel())*1.5) -- 150 = 1.5x		free account
-	elseif staminaMinutes <= 840 and Boost > 0 then
-		player:setBaseXpGain(Game.getExperienceStage(player:getLevel())*1) -- 50 = 0.5x	all players
+	local storeBoost = player:getExpBoostStamina()
+	player:setStoreXpBoost(storeBoost > 0 and 50 or 0)
+	if staminaMinutes > 2400 and player:isPremium() and storeBoost > 0 then
+		player:setBaseXpGain(displayRate*2*100) -- Premium + Stamina boost + Store boost
+		player:setStaminaXpBoost(150)
+	elseif staminaMinutes > 2400 and player:isPremium() and storeBoost <= 0 then
+		player:setBaseXpGain(displayRate*1.5*100) -- Premium + Stamina boost
+		player:setStaminaXpBoost(150)
+	elseif staminaMinutes <= 2400 and staminaMinutes > 840 and player:isPremium() and storeBoost > 0 then
+		player:setBaseXpGain(displayRate*1.5*100) -- Premium + Store boost
+		player:setStaminaXpBoost(100)
+	elseif staminaMinutes > 840 and storeBoost > 0 then
+		player:setBaseXpGain(displayRate*1.5*100) -- FACC + Store boost
+		player:setStaminaXpBoost(100)
+	elseif staminaMinutes <= 840 and storeBoost > 0 then
+		player:setBaseXpGain(displayRate*1*100) -- ALL players low stamina + Store boost
+		player:setStaminaXpBoost(50)
 	elseif staminaMinutes <= 840 then
-		player:setBaseXpGain(Game.getExperienceStage(player:getLevel())*0.5) -- 50 = 0.5x	all players
+		player:setBaseXpGain(displayRate*0.5*100) -- ALL players low stamina
+		player:setStaminaXpBoost(50)
 	end
 
 	if player:getClient().version > 1110 then
