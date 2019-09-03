@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <actions>
+	<!-- VIP -->
+	<action itemid="5785" script="custom/vip_medal.lua" />
+	<action itemid="9653" script="custom/vip_medal.lua" />
 	
 	<!-- Addons -->
 	<action fromid="18517" toid="18522" script="addons/addons.lua" />

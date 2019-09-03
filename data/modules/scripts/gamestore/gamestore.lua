@@ -130,7 +130,7 @@ GameStore.Categories = {
   }, 
   {
     icons = { "Category_PremiumTime.png" },
-    name = "Premium Time",
+    name = "VIP System",
       offers = { 
             {
             icons = { "Product_PremiumTime30.png" },
